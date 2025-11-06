@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Input;
 
 namespace AppRpgEtec.ViewModels.Usuarios
 {
@@ -21,7 +22,15 @@ namespace AppRpgEtec.ViewModels.Usuarios
             string token = Preferences.Get("UsuarioToken", string.Empty);
             uService = new UsuarioService();
 
+            AbrirGaleriaCommand = new Command(AbrirGaleria);
+            FotografarCommand = new Command(Fotografar);
+            SalvarImagemCommand = new Command(SalvarImagemAzure);
+
         }
+
+        public ICommand AbrirGaleriaCommand { get; }
+        public ICommand FotografarCommand { get; }
+        public ICommand SalvarImagemCommand { get; }
 
         private ImageSource fonteImagem;
         private byte[] foto;
@@ -42,6 +51,38 @@ namespace AppRpgEtec.ViewModels.Usuarios
             {
                 foto = value;
                 OnPropertyChanged();
+
+            }
+        }
+
+        public async void AbrirGaleria()
+        {
+            try
+            {
+                if (MediaPicker.Default.IsCaptureSupported)
+                {
+                    FileResult photo = await MediaPicker.Default.PickPhotoAsync();
+                    if (photo != null)
+                    {
+                        using (Stream sourceStream = await photo.OpenReadAsync())
+                        {
+                            using (MemoryStream ms = new MemoryStream())
+                            {
+                                await sourceStream.CopyToAsync(ms);
+                                Foto = ms.ToArray();
+
+                                FonteImagem = ImageSource.FromStream(() => new MemoryStream(Foto));
+
+                            }
+                        }
+
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                await Application.Current.MainPage
+                    .DisplayAlert("ops", ex.Message + "Detalhes: " + ex.InnerException, "Ok");
 
             }
         }
